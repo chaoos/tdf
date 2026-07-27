@@ -48,6 +48,21 @@ det K = (∏_t det R_t) * det(I - (-1)^{L_t} T).
   for periodic and anti-periodic boundary conditions, even and odd `L_t`, and
   with non-zero mass and chemical potential.
 
+### Phase 4 – Canonical determinants
+- `tdf/canonical.py`: fixed-quark-number determinants `det_k(K[U])` for
+  `k = -L, …, L` from the characteristic polynomial of the transfer matrix.
+
+```
+det_k(K[U]) = (∏_t det R_t) * c_{k+L},
+```
+
+where `c_m` are the coefficients of `det(z I - (-1)^{L_t} T)`.
+
+- Validation tests:
+  - reflection symmetry `det_k^* = det_{-k}`
+  - sum rule `Σ_k det_k = det K[U, μ=0]`
+  - `det_0` is real
+
 ## Running tests and verification
 
 ```bash
