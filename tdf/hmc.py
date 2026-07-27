@@ -1,10 +1,14 @@
 """Hybrid Monte Carlo (HMC) samplers for the 2D Schwinger model."""
 
+import logging
+
 import jax
 import jax.numpy as jnp
 from jax import random
 
 from tdf import lattice, dirac
+
+logger = logging.getLogger(__name__)
 
 
 def action_standard(theta, beta, mu, kappa):
@@ -144,15 +148,20 @@ def run_hmc(key, theta0, action_fn, force_fn, n_therm, n_measure, n_skip,
     theta = theta0
     keys = random.split(key, n_therm + n_measure * n_skip)
 
+    logger.info("Starting HMC thermalization (%d trajectories)", n_therm)
     # Thermalization
     for i in range(n_therm):
         theta, _ = hmc_step(keys[i], theta, action_fn, force_fn, dt, n_steps)
+        if (i + 1) % max(1, n_therm // 10) == 0:
+            logger.debug("Thermalization trajectory %d/%d complete", i + 1, n_therm)
+    logger.info("Thermalization complete")
 
     # Measurement
     configs = []
     history = {name: [] for name in observables.keys()}
     history["accept"] = []
 
+    logger.info("Starting measurements (%d measurements, skip=%d)", n_measure, n_skip)
     key_idx = n_therm
     for m in range(n_measure):
         accepted_count = 0
@@ -165,7 +174,10 @@ def run_hmc(key, theta0, action_fn, force_fn, n_therm, n_measure, n_skip,
             history[name].append(float(obs_fn(theta)))
         history["accept"].append(accepted_count / n_skip)
         configs.append(theta)
+        if (m + 1) % max(1, n_measure // 10) == 0:
+            logger.info("Measurement %d/%d complete", m + 1, n_measure)
 
     history = {k: jnp.array(v) for k, v in history.items()}
     configs = jnp.stack(configs)
+    logger.info("HMC run complete")
     return history, configs

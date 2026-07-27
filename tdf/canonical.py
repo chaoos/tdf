@@ -1,8 +1,12 @@
 """Canonical determinants from the transfer matrix spectrum."""
 
+import logging
+
 import jax.numpy as jnp
 
 from tdf.reduced import transfer_matrices
+
+logger = logging.getLogger(__name__)
 
 
 def elementary_symmetric(eigenvalues):

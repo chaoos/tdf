@@ -1,7 +1,11 @@
 """U(1) lattice gauge field utilities for the 2D Schwinger model."""
 
+import logging
+
 import jax.numpy as jnp
 from jax import random
+
+logger = logging.getLogger(__name__)
 
 
 def make_gauge_field(L, Lt, key, dtype=jnp.float64):

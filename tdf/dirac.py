@@ -1,6 +1,10 @@
 """Wilson-Dirac operator for the 2D U(1) Schwinger model."""
 
+import logging
+
 import jax.numpy as jnp
+
+logger = logging.getLogger(__name__)
 
 
 # Euclidean gamma matrices used in the thesis: gamma_0 = sigma_z, gamma_1 = sigma_x.

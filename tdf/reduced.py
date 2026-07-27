@@ -1,8 +1,12 @@
 """Temporal determinant factorization (reduced determinant) for the Schwinger model."""
 
+import logging
+
 import jax.numpy as jnp
 
 from tdf.dirac import dirac_blocks, site_major_projector, P0, PM0
+
+logger = logging.getLogger(__name__)
 
 
 def transfer_matrices(theta, mu, kappa, boundary_phase=-1.0):

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Verify Phase 0 (environment) and Phase 1 (lattice + Dirac operator)."""
 
+import logging
 import os
 
 # Do not pre-allocate the entire GPU memory pool; the RTX 3050 has only 6 GB.
@@ -10,58 +11,62 @@ import jax
 import jax.numpy as jnp
 from jax import random
 
-from tdf import lattice, dirac
+from tdf import configure_logging, lattice, dirac
+
+logger = logging.getLogger(__name__)
 
 
 def main():
-    print("=" * 60)
-    print("Phase 0: environment check")
-    print("=" * 60)
-    print(f"JAX version: {jax.__version__}")
-    print(f"JAX devices: {jax.devices()}")
-    x = jax.numpy.ones(3).block_until_ready()
-    print(f"Quick GPU/CPU op succeeded, device: {x.device}")
+    configure_logging(level=logging.INFO)
 
-    print()
-    print("=" * 60)
-    print("Phase 1: lattice + Wilson-Dirac operator")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("Phase 0: environment check")
+    logger.info("=" * 60)
+    logger.info("JAX version: %s", jax.__version__)
+    logger.info("JAX devices: %s", jax.devices())
+    x = jax.numpy.ones(3).block_until_ready()
+    logger.info("Quick GPU/CPU op succeeded, device: %s", x.device)
+
+    logger.info("")
+    logger.info("=" * 60)
+    logger.info("Phase 1: lattice + Wilson-Dirac operator")
+    logger.info("=" * 60)
 
     key = random.PRNGKey(42)
     L, Lt = 6, 8
     theta = lattice.make_gauge_field(L, Lt, key)
-    print(f"Gauge field shape: {theta.shape}  (expected (2, {Lt}, {L}))")
+    logger.info("Gauge field shape: %s  (expected (2, %d, %d))", theta.shape, Lt, L)
 
     beta = 5.0
     sg = lattice.gauge_action(theta, beta)
     plaq = lattice.average_plaquette(theta)
     q = lattice.topological_charge(theta)
-    print(f"Gauge action S_g = {sg:.6f}")
-    print(f"Average plaquette = {plaq:.6f}")
-    print(f"Topological charge = {q:.6f}")
+    logger.info("Gauge action S_g = %.6f", float(sg))
+    logger.info("Average plaquette = %.6f", float(plaq))
+    logger.info("Topological charge = %.6f", float(q))
 
     mass = 0.0
     kappa = dirac.kappa_from_mass(mass)
     K = dirac.wilson_dirac(theta, mu=0.0, kappa=kappa, boundary_phase=-1.0)
-    print(f"Wilson-Dirac matrix shape: {K.shape}")
-    print(f"K dtype: {K.dtype}")
+    logger.info("Wilson-Dirac matrix shape: %s", K.shape)
+    logger.info("K dtype: %s", K.dtype)
 
     detK = jnp.linalg.det(K)
-    print(f"det(K) = {detK}")
-    print(f"|Im(det(K))| = {abs(detK.imag):.3e}  (should be ~0 for mu=0)")
+    logger.info("det(K) = %s", detK)
+    logger.info("|Im(det(K))| = %.3e  (should be ~0 for mu=0)", float(abs(detK.imag)))
 
     # gamma5 hermiticity
     gamma5 = dirac.GAMMA_5
     Gamma5 = jnp.kron(jnp.eye(L * Lt, dtype=jnp.complex128), gamma5)
     g5Kg5 = Gamma5 @ K @ Gamma5
     diff_g5 = jnp.max(jnp.abs(g5Kg5 - jnp.conj(K.T)))
-    print(f"max |gamma5 K gamma5 - K^dagger| = {diff_g5:.3e}  (should be ~0)")
+    logger.info("max |gamma5 K gamma5 - K^dagger| = %.3e  (should be ~0)", float(diff_g5))
 
     # blocks vs full matrix
     B, A_plus, A_minus = dirac.dirac_blocks(theta, mu=0.0, kappa=kappa)
-    print(f"B_t shape: {B.shape}")
-    print(f"A_plus shape: {A_plus.shape}")
-    print(f"A_minus shape: {A_minus.shape}")
+    logger.info("B_t shape: %s", B.shape)
+    logger.info("A_plus shape: %s", A_plus.shape)
+    logger.info("A_minus shape: %s", A_minus.shape)
 
     P0_full = dirac.site_major_projector(dirac.P0, L)
     PM0_full = dirac.site_major_projector(dirac.PM0, L)
@@ -83,12 +88,12 @@ def main():
         K_from_blocks = K_from_blocks.at[s:s + 2 * L, 2 * L * tm1:2 * L * tm1 + 2 * L].set(backward)
 
     diff_blocks = jnp.max(jnp.abs(K - K_from_blocks))
-    print(f"max |K_direct - K_from_blocks| = {diff_blocks:.3e}  (should be ~0)")
+    logger.info("max |K_direct - K_from_blocks| = %.3e  (should be ~0)", float(diff_blocks))
 
-    print()
-    print("=" * 60)
-    print("All Phase 1 checks passed if the three numbers above are ~0.")
-    print("=" * 60)
+    logger.info("")
+    logger.info("=" * 60)
+    logger.info("All Phase 1 checks passed if the three numbers above are ~0.")
+    logger.info("=" * 60)
 
 
 if __name__ == "__main__":

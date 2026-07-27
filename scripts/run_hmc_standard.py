@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
 """Run the reference standard HMC for the 2-flavour Schwinger model."""
 
-import os
-os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
-
 import argparse
+import logging
+import os
+
+os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
 
 import jax.numpy as jnp
 from jax import random
 
-from tdf import lattice, dirac, hmc
+from tdf import configure_logging, lattice, dirac, hmc
+
+logger = logging.getLogger(__name__)
 
 
 def main():
+    configure_logging(level=logging.INFO)
+
     parser = argparse.ArgumentParser(description="Standard Nf=2 HMC")
     parser.add_argument("--L", type=int, default=6)
     parser.add_argument("--Lt", type=int, default=6)
@@ -38,10 +43,12 @@ def main():
 
     force_fn = hmc.make_force(action_fn)
 
-    print(f"Running standard Nf=2 HMC on {args.L}x{args.Lt} lattice")
-    print(f"beta={args.beta}, mass={args.mass}, kappa={kappa:.4f}, mu={args.mu}")
-    print(f"trajectory: dt={args.dt}, n_steps={args.n_steps}")
-    print(f"thermalization={args.n_therm}, measurements={args.n_measure}, skip={args.n_skip}")
+    logger.info("Running standard Nf=2 HMC on %dx%d lattice", args.L, args.Lt)
+    logger.info("beta=%.4f, mass=%.4f, kappa=%.4f, mu=%.4f",
+                args.beta, args.mass, kappa, args.mu)
+    logger.info("Trajectory: dt=%.4f, n_steps=%d", args.dt, args.n_steps)
+    logger.info("Thermalization=%d, measurements=%d, skip=%d",
+                args.n_therm, args.n_measure, args.n_skip)
 
     history, configs = hmc.run_hmc(
         key_run, theta, action_fn, force_fn,
@@ -56,19 +63,20 @@ def main():
     q = history["topological_charge"]
     accept = history["accept"]
 
-    print("\nResults:")
-    print(f"  acceptance rate = {float(jnp.mean(accept)):.3f}")
-    print(f"  plaquette       = {float(jnp.mean(plaquette)):.6f} +/- {float(jnp.std(plaquette)):.6f}")
-    print(f"  topo charge     = {float(jnp.mean(q)):.3f} +/- {float(jnp.std(q)):.3f}")
+    logger.info("Results:")
+    logger.info("  acceptance rate = %.3f", float(jnp.mean(accept)))
+    logger.info("  plaquette       = %.6f +/- %.6f",
+                float(jnp.mean(plaquette)), float(jnp.std(plaquette)))
+    logger.info("  topo charge     = %.3f +/- %.3f",
+                float(jnp.mean(q)), float(jnp.std(q)))
 
-    # Save a simple summary.
     jnp.savez(
         "hmc_standard_summary.npz",
         plaquette=plaquette,
         topological_charge=q,
         accept=accept,
     )
-    print("\nSummary saved to hmc_standard_summary.npz")
+    logger.info("Summary saved to hmc_standard_summary.npz")
 
 
 if __name__ == "__main__":
