@@ -126,13 +126,41 @@ The JSON summary and NumPy histories are saved as:
 The JSON file contains the acceptance sweeps, the detailed-run summary, and the
 `L = 4` force-scaling data.
 
-## Pseudofermion comparison
+## Unified determinant comparison
 
-A second benchmark compares the standard pseudofermion estimator (full Dirac
-space) with the TDF pseudofermion estimator (transfer-matrix space).  Both
-target the full 2-flavour weight `|det K[U, μ=0]|²`.  The TDF version keeps the
-bulk factor `|∏_t det R_t|²` exact and uses pseudofermions only for the
-transfer-matrix factor `|det(I - (-1)^{L_t} T)|²`.
+The script `scripts/run_determinant_comparison.py` compares the exact
+determinant, the TDF reduced determinant, and the stochastic pseudofermion
+estimators on the same gauge configurations.  All numbers below are for
+`beta = 5.0`, `m0 = 0.0` (`kappa = 0.25`), `mu = 0.0`, with 200 pseudofermion
+samples and CG tolerance `1e-9`.
+
+| Lattice | Exact log\|det K\|² | TDF log\|det K\|² | TDF rel. diff. |
+|---------|--------------------:|------------------:|---------------:|
+| 4×4 | 0.7148 | 0.7148 | 1.110e-15 |
+| 6×6 | 0.0604 | 0.0604 | 5.274e-16 |
+| 8×8 | -0.6971 | -0.6971 | 5.063e-14 |
+
+The TDF determinant matches the exact determinant to machine precision on all
+three lattice sizes, confirming the reduced determinant implementation.
+
+| Lattice | Std. pf. `<S_pf>` | Std. pf. `σ(S_pf)` | TDF pf. `<S_pf>` | TDF pf. `σ(S_pf)` |
+|---------|------------------:|-------------------:|-----------------:|------------------:|
+| 4×4 | 59.69 | 24.53 | 28.42 | 2.75 |
+| 6×6 | 143.45 | 34.85 | 61.30 | 3.27 |
+| 8×8 | 251.86 | 47.77 | 107.07 | 4.78 |
+
+The exact log determinant is close to zero on these small lattices, so the
+pseudofermion action `<S_pf>` has a large additive offset (mainly the Gaussian
+normalisation).  The width `σ(S_pf)` measures the stochastic noise of the
+estimator.  The TDF pseudofermion estimator has roughly **5–10 times smaller
+standard deviation** than the standard one, and its growth with lattice size is
+much slower.
+
+## Pseudofermion HMC comparison
+
+A separate benchmark compares the two pseudofermion HMC samplers (standard and
+TDF) as full Markov chains.  Both target the full 2-flavour weight
+`|det K[U, μ=0]|²`.
 
 ### Parameters
 

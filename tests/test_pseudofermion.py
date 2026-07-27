@@ -114,3 +114,17 @@ def test_hmc_pseudofermion_tdf_runs(L, Lt):
     )
     assert configs.shape == (2, 2, Lt, L)
     assert jnp.all(jnp.isfinite(history["plaquette"]))
+
+
+def test_unified_determinant_comparison():
+    """The unified comparison agrees with exact and TDF determinants."""
+    from tdf.determinant_comparison import compare_for_size
+
+    key = random.PRNGKey(9)
+    result = compare_for_size(
+        L=4, Lt=4, beta=5.0, mass=0.0, n_samples=50,
+        tol=1e-6, maxiter=16, key=key
+    )
+    assert result["tdf_rel_diff"] < 1e-10
+    assert jnp.isfinite(result["standard_pseudofermion"]["mean_Spf"])
+    assert jnp.isfinite(result["tdf_pseudofermion"]["mean_Spf"])

@@ -60,6 +60,10 @@ development GPU has only 6 GB of VRAM.
 .venv/bin/python scripts/run_pseudofermion_benchmark.py --L 4 --Lt 4 \
     --beta 5.0 --mass 0.0 --dt 0.05 --n-steps 3 --n-therm 5 \
     --n-measure 5 --n-skip 1 --tol 1e-6
+
+# Unified comparison: exact, TDF, and pseudofermion determinants
+.venv/bin/python scripts/run_determinant_comparison.py --sizes 4 6 8 \
+    --n-samples 200 --tol 1e-9
 ```
 
 ## Package overview
@@ -74,6 +78,7 @@ development GPU has only 6 GB of VRAM.
 | `tdf/hmc_canonical.py` | TDF-based canonical HMC sampler |
 | `tdf/pseudofermion.py` | Pseudofermion action/force and CG solver |
 | `tdf/hmc_pseudofermion.py` | Pseudofermion HMC drivers |
+| `tdf/determinant_comparison.py` | Unified exact/TDF/pseudofermion comparison |
 
 ## Documentation
 
