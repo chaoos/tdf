@@ -123,7 +123,22 @@ and diagnostics at `INFO`/`DEBUG` level.  Set the level when running a script:
 # TDF canonical HMC (small example)
 .venv/bin/python scripts/run_hmc_canonical.py --L 4 --Lt 4 --n 2 --beta 3.0 \
     --n-therm 5 --n-measure 5 --n-skip 2 --n-steps 5
+
+# Phase 7 comparison (small example; increase stats for production)
+.venv/bin/python scripts/run_phase7_comparison.py --L 4 --Lt 4 --beta 5.0 \
+    --mass 0.0 --dt 0.1 --n-steps 5 --n-therm 20 --n-measure 50 --n-skip 3
 ```
+
+### Phase 7 – Comparison and results
+- `scripts/run_phase7_comparison.py`: benchmark that runs standard and canonical
+  HMC with identical parameters and records acceptance rates, plaquette
+  autocorrelation times, and wall-clock cost per trajectory.
+- `RESULTS.md`: summary of the Phase 7 benchmark on a `4 × 4` lattice.
+
+## Results
+
+See [`RESULTS.md`](RESULTS.md) for the Phase 7 comparison between standard
+Nf=2 HMC and TDF-based canonical HMC.
 
 ## Roadmap
 
