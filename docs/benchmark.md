@@ -1,58 +1,46 @@
 # Benchmark
 
-The benchmark compares the reference standard HMC against the TDF-based
-canonical HMC on identical lattices and with identical random seeds.
+The benchmark compares the *algorithms*, not just the current implementation or
+hardware.  It therefore reports acceptance rates, Hamiltonian energy violation,
+autocorrelation times, and the asymptotic scaling of a single force evaluation.
 
 ## Running the benchmark
-
-Use `scripts/run_benchmark.py`:
 
 ```bash
 .venv/bin/python scripts/run_benchmark.py --L 4 --Lt 4 --beta 5.0 \
     --mass 0.0 --dt 0.1 --n-steps 5 --n-therm 20 --n-measure 50 --n-skip 3
 ```
 
-The script runs three simulations:
+The script performs three studies:
 
-1. Standard grand-canonical Nf=2 HMC.
-2. Canonical HMC with sector `n = 0`.
-3. Canonical HMC with sector `n = L // 2`.
+1. **Step-size sweep.**  Runs both algorithms at several values of `dt` with
+   fixed `n_steps` and reports the acceptance rate.  This reveals how sensitive
+   each algorithm is to the integrator step size.
 
-It records for each run:
+2. **Detailed run.**  Runs both algorithms at the chosen `dt` and records:
+   - acceptance rate,
+   - mean, standard deviation, and maximum of `delta H`,
+   - plaquette mean, standard deviation, and integrated autocorrelation time.
 
-- wall-clock time per trajectory,
-- acceptance rate per measurement block,
-- average plaquette and its standard deviation,
-- rough integrated autocorrelation time of the plaquette,
-- average topological charge.
+3. **Force scaling.**  Measures the wall-clock time of a single force evaluation
+   for `Lt = 4, 6, 8` (with `L` fixed).  This exposes the asymptotic scaling of
+   the two algorithms.
 
 ## Output files
 
-- `benchmark_results.json` – JSON summary of the parameters and measured
-  quantities.
-- `benchmark_histories.npz` – NumPy archive containing the plaquette history
-  of each run.  Load with `numpy.load`.
+- `benchmark_results.json` – JSON summary of all three studies.
+- `benchmark_histories.npz` – plaquette and `delta H` histories for both
+  algorithms.
 
 ## Interpreting the results
 
-The key metric is the **cost per independent sample**, defined as
+See [`RESULTS.md`](../RESULTS.md) for the benchmark output on a `4 × 4`
+lattice.  The main points are:
 
-```
-cost = time_per_trajectory * n_skip * tau_int(P) .
-```
-
-This combines raw trajectory speed with the autocorrelation of the observable
-being measured.  On the `4 × 4` lattice reported in [`RESULTS.md`](../RESULTS.md)
-the canonical `n = 2` run is about ten times cheaper per independent plaquette
-measurement than the standard run.
-
-Keep in mind:
-
-- The benchmark uses a very small volume and modest statistics.
-- Acceptance rates are on the low side; production runs should tune `dt` and
-  `n_steps` first.
-- The canonical sectors are not the same ensemble as the grand-canonical
-  standard run, so plaquette averages need not agree.
-- The speed-up is expected to grow with `L_t` because the standard force scales
-  with the full `L·Lt × L·Lt` determinant, whereas the canonical force uses the
-  fixed `2L × 2L` transfer matrix.
+- Acceptance and `delta H` are comparable at matched leapfrog parameters.
+- Autocorrelation depends on volume and sector; it should be compared only
+  after tuning acceptance to a common target.
+- The canonical force has a larger constant overhead on small lattices because
+  its gradient goes through a transfer-matrix eigenvalue decomposition.  The
+  crossover where it becomes cheaper than the standard force occurs at
+  moderately large lattice size.

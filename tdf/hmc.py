@@ -58,8 +58,8 @@ def make_force(action_fn):
     return jax.jit(jax.grad(lambda t: -action_fn(t)))
 
 
-def hmc_step(key, theta, action_fn, force_fn, dt, n_steps):
-    """Single HMC trajectory with leapfrog integration.
+def hmc_step_diagnostics(key, theta, action_fn, force_fn, dt, n_steps):
+    """Single HMC trajectory with leapfrog integration; returns delta H too.
 
     Parameters
     ----------
@@ -82,6 +82,8 @@ def hmc_step(key, theta, action_fn, force_fn, dt, n_steps):
         New gauge field (accepted or old).
     accepted : bool
         Whether the proposal was accepted.
+    delta_H : float
+        Hamiltonian energy violation (H_new - H_old).
     """
     key_mom, key_acc = random.split(key)
     p = random.normal(key_mom, shape=theta.shape, dtype=theta.dtype)
@@ -104,6 +106,18 @@ def hmc_step(key, theta, action_fn, force_fn, dt, n_steps):
     accepted = random.uniform(key_acc) < accept_prob
 
     theta_new = jnp.where(accepted, theta_prop, theta)
+    return theta_new, accepted, delta_H
+
+
+def hmc_step(key, theta, action_fn, force_fn, dt, n_steps):
+    """Single HMC trajectory with leapfrog integration.
+
+    This is a thin wrapper around hmc_step_diagnostics that discards the
+    energy violation, preserving the original two-element return signature.
+    """
+    theta_new, accepted, _ = hmc_step_diagnostics(
+        key, theta, action_fn, force_fn, dt, n_steps
+    )
     return theta_new, accepted
 
 
