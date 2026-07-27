@@ -80,6 +80,33 @@ S[U] = S_g[U] - 2 log |det K[U, μ]|
   - quenched HMC has near-perfect acceptance for tiny steps
   - full `run_hmc` pipeline executes
 
+### Phase 6 – TDF-based canonical HMC
+- `tdf/hmc_canonical.py`: Hybrid Monte Carlo sampler for a fixed isospin / quark
+  number sector `n` using the TDF canonical determinants.
+
+```
+S_n[U] = S_g[U] - 2 log |det_n(K[U, μ])|
+```
+
+- The weight `exp(-S_n) = exp(-S_g) |det_n|^2` samples the 2-flavour ensemble at
+  fixed sector index `n`.
+- `scripts/run_hmc_canonical.py`: command-line driver with `--n` option.
+- Validation tests:
+  - canonical action is real and its gradient is finite
+  - charge-conjugation symmetry `S_n = S_{-n}` at `μ = 0`
+  - full `run_hmc_canonical` pipeline executes
+
+## Logging
+
+All modules and scripts now use the standard Python `logging` library.  Scripts
+configure logging via `tdf.configure_logging()`; library modules log progress
+and diagnostics at `INFO`/`DEBUG` level.  Set the level when running a script:
+
+```bash
+.venv/bin/python scripts/run_hmc_canonical.py --L 4 --Lt 4 --n 2 --beta 3.0 \
+    --n-therm 5 --n-measure 5 --n-skip 2 --n-steps 5
+```
+
 ## Running tests and verification
 
 ```bash
@@ -92,6 +119,10 @@ S[U] = S_g[U] - 2 log |det K[U, μ]|
 # Reference standard HMC (small example)
 .venv/bin/python scripts/run_hmc_standard.py --L 4 --Lt 4 --beta 3.0 \
     --n-therm 10 --n-measure 10 --n-skip 2 --n-steps 5
+
+# TDF canonical HMC (small example)
+.venv/bin/python scripts/run_hmc_canonical.py --L 4 --Lt 4 --n 2 --beta 3.0 \
+    --n-therm 5 --n-measure 5 --n-skip 2 --n-steps 5
 ```
 
 ## Roadmap
