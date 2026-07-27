@@ -63,6 +63,23 @@ where `c_m` are the coefficients of `det(z I - (-1)^{L_t} T)`.
   - sum rule `Σ_k det_k = det K[U, μ=0]`
   - `det_0` is real
 
+### Phase 5 – Reference standard HMC
+- `tdf/hmc.py`: reference Hybrid Monte Carlo sampler for the 2-flavour model
+  using the full Wilson–Dirac determinant.
+
+```
+S[U] = S_g[U] - 2 log |det K[U, μ]|
+```
+
+- Leapfrog integration with automatic differentiation for the fermion force.
+- `scripts/run_hmc_standard.py`: command-line driver.
+- Validation tests:
+  - action is real and finite
+  - standard action matches TDF-based action
+  - force has correct shape
+  - quenched HMC has near-perfect acceptance for tiny steps
+  - full `run_hmc` pipeline executes
+
 ## Running tests and verification
 
 ```bash
@@ -71,6 +88,10 @@ where `c_m` are the coefficients of `det(z I - (-1)^{L_t} T)`.
 
 # Phase 1 verification
 .venv/bin/python scripts/verify_phase1.py
+
+# Reference standard HMC (small example)
+.venv/bin/python scripts/run_hmc_standard.py --L 4 --Lt 4 --beta 3.0 \
+    --n-therm 10 --n-measure 10 --n-skip 2 --n-steps 5
 ```
 
 ## Roadmap
