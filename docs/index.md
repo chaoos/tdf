@@ -13,7 +13,9 @@ see the top-level [`README.md`](../README.md).
   samplers.
 - [`pseudofermion.md`](pseudofermion.md) – stochastic HMC with pseudofermions,
   both in the full Dirac space and in the TDF transfer-matrix space.
-- [`benchmark.md`](benchmark.md) – how to reproduce the benchmark reported in
+- [`determinant_formulas.md`](determinant_formulas.md) – exact formulas for the
+  exact, TDF, and pseudofermion determinant estimators used in the comparison.
+- [`benchmark.md`](benchmark.md) – how to reproduce the benchmarks reported in
   [`RESULTS.md`](../RESULTS.md) and how to interpret the output.
 
 ## Directory layout

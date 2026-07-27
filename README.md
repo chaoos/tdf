@@ -88,6 +88,7 @@ More detailed documentation lives in the [`docs/`](docs/) directory:
 - [`docs/algorithm.md`](docs/algorithm.md) – the TDF and canonical-determinant formalism
 - [`docs/hmc.md`](docs/hmc.md) – using the HMC samplers
 - [`docs/pseudofermion.md`](docs/pseudofermion.md) – stochastic HMC with pseudofermions
+- [`docs/determinant_formulas.md`](docs/determinant_formulas.md) – exact determinant and pseudofermion formulas
 - [`docs/benchmark.md`](docs/benchmark.md) – reproducing and interpreting the benchmarks
 
 ## Results
