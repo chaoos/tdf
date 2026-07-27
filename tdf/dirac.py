@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 # Euclidean gamma matrices used in the thesis: gamma_0 = sigma_z, gamma_1 = sigma_x.
 GAMMA_0 = jnp.array([[1.0, 0.0], [0.0, -1.0]], dtype=jnp.complex128)
 GAMMA_1 = jnp.array([[0.0, 1.0], [1.0, 0.0]], dtype=jnp.complex128)
-# Chirality matrix gamma_5 = i * gamma_0 * gamma_1 = -sigma_y.
+# Chirality matrix gamma_5 = -i * gamma_0 * gamma_1 = sigma_y.
 GAMMA_5 = jnp.array([[0.0, -1.0j], [1.0j, 0.0]], dtype=jnp.complex128)
 
 # Projectors P^(+/- mu) = (1 \mp gamma_mu) / 2.

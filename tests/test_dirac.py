@@ -64,6 +64,93 @@ def test_boundary_phase_determinant_real():
     assert abs(jnp.linalg.det(K_per).imag) < 1e-10
 
 
+def test_clifford_algebra():
+    """Verify the 1+1D Euclidean Clifford algebra {gamma_mu, gamma_nu} = 2 delta_mu nu I."""
+    g0 = dirac.GAMMA_0
+    g1 = dirac.GAMMA_1
+    I2 = jnp.eye(2, dtype=jnp.complex128)
+
+    # Anti-commutation relations.
+    assert jnp.allclose(g0 @ g0 + g0 @ g0, 2 * I2, atol=1e-12)
+    assert jnp.allclose(g1 @ g1 + g1 @ g1, 2 * I2, atol=1e-12)
+    assert jnp.allclose(g0 @ g1 + g1 @ g0, jnp.zeros_like(I2), atol=1e-12)
+
+    # Hermiticity of gamma matrices.
+    assert jnp.allclose(g0, jnp.conj(g0.T), atol=1e-12)
+    assert jnp.allclose(g1, jnp.conj(g1.T), atol=1e-12)
+
+
+def test_gamma5_properties():
+    """Verify gamma_5 = -i gamma_0 gamma_1 and its algebraic properties."""
+    g0 = dirac.GAMMA_0
+    g1 = dirac.GAMMA_1
+    g5 = dirac.GAMMA_5
+    I2 = jnp.eye(2, dtype=jnp.complex128)
+
+    # Definition used in the code.
+    assert jnp.allclose(g5, -1.0j * g0 @ g1, atol=1e-12)
+
+    # Hermitian and unitary.
+    assert jnp.allclose(g5, jnp.conj(g5.T), atol=1e-12)
+    assert jnp.allclose(g5 @ g5, I2, atol=1e-12)
+
+    # Anti-commutes with gamma_mu.
+    assert jnp.allclose(g5 @ g0 + g0 @ g5, jnp.zeros_like(I2), atol=1e-12)
+    assert jnp.allclose(g5 @ g1 + g1 @ g5, jnp.zeros_like(I2), atol=1e-12)
+
+
+def test_chiral_projectors():
+    """Verify P_+ and P_- = (I +/- gamma_5)/2 are orthogonal projectors."""
+    g5 = dirac.GAMMA_5
+    I2 = jnp.eye(2, dtype=jnp.complex128)
+    P_plus = 0.5 * (I2 + g5)
+    P_minus = 0.5 * (I2 - g5)
+
+    # Idempotence.
+    assert jnp.allclose(P_plus @ P_plus, P_plus, atol=1e-12)
+    assert jnp.allclose(P_minus @ P_minus, P_minus, atol=1e-12)
+
+    # Orthogonality.
+    assert jnp.allclose(P_plus @ P_minus, jnp.zeros_like(I2), atol=1e-12)
+    assert jnp.allclose(P_minus @ P_plus, jnp.zeros_like(I2), atol=1e-12)
+
+    # Completeness.
+    assert jnp.allclose(P_plus + P_minus, I2, atol=1e-12)
+
+    # Eigenprojectors of gamma_5.
+    assert jnp.allclose(g5 @ P_plus, P_plus, atol=1e-12)
+    assert jnp.allclose(g5 @ P_minus, -P_minus, atol=1e-12)
+
+
+def test_spin_projectors():
+    r"""Verify the Wilson hopping projectors P^(+/- mu) = (1 \mp gamma_mu)/2."""
+    g0 = dirac.GAMMA_0
+    g1 = dirac.GAMMA_1
+    I2 = jnp.eye(2, dtype=jnp.complex128)
+
+    # Forward/backward temporal projectors.
+    assert jnp.allclose(dirac.P0, 0.5 * (I2 - g0), atol=1e-12)
+    assert jnp.allclose(dirac.PM0, 0.5 * (I2 + g0), atol=1e-12)
+
+    # Forward/backward spatial projectors.
+    assert jnp.allclose(dirac.P1, 0.5 * (I2 - g1), atol=1e-12)
+    assert jnp.allclose(dirac.PM1, 0.5 * (I2 + g1), atol=1e-12)
+
+    for P in [dirac.P0, dirac.PM0, dirac.P1, dirac.PM1]:
+        # Idempotence.
+        assert jnp.allclose(P @ P, P, atol=1e-12)
+        # Hermitian (since gamma_mu are hermitian).
+        assert jnp.allclose(P, jnp.conj(P.T), atol=1e-12)
+
+    # Complementary pairs sum to identity.
+    assert jnp.allclose(dirac.P0 + dirac.PM0, I2, atol=1e-12)
+    assert jnp.allclose(dirac.P1 + dirac.PM1, I2, atol=1e-12)
+
+    # Orthogonality within a pair.
+    assert jnp.allclose(dirac.P0 @ dirac.PM0, jnp.zeros_like(I2), atol=1e-12)
+    assert jnp.allclose(dirac.P1 @ dirac.PM1, jnp.zeros_like(I2), atol=1e-12)
+
+
 def test_dirac_blocks_match_full_matrix():
     """Build K from blocks and compare to wilson_dirac."""
     key = random.PRNGKey(6)
