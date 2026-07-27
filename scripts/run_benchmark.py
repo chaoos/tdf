@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Phase 7 benchmark: compare standard and TDF canonical HMC."""
+"""Benchmark comparing standard and TDF canonical HMC."""
 
 import argparse
 import json
@@ -86,7 +86,7 @@ def run_single(label, run_fn, key, theta0, args):
 def main():
     configure_logging(level=logging.INFO)
 
-    parser = argparse.ArgumentParser(description="Phase 7 HMC comparison")
+    parser = argparse.ArgumentParser(description="Compare standard and TDF canonical HMC")
     parser.add_argument("--L", type=int, default=6)
     parser.add_argument("--Lt", type=int, default=6)
     parser.add_argument("--beta", type=float, default=5.0)
@@ -98,7 +98,7 @@ def main():
     parser.add_argument("--n-measure", type=int, default=100)
     parser.add_argument("--n-skip", type=int, default=5)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--output", type=str, default="phase7_results.json")
+    parser.add_argument("--output", type=str, default="benchmark_results.json")
     args = parser.parse_args()
 
     kappa = dirac.kappa_from_mass(args.mass)
@@ -108,7 +108,7 @@ def main():
     key_field, key_run = random.split(key)
     theta0 = lattice.make_gauge_field(L, args.Lt, key_field)
 
-    logger.info("Phase 7 comparison: %dx%d, beta=%.3f, mass=%.3f, kappa=%.4f, mu=%.3f",
+    logger.info("Benchmark: %dx%d, beta=%.3f, mass=%.3f, kappa=%.4f, mu=%.3f",
                 L, args.Lt, args.beta, args.mass, kappa, args.mu)
     logger.info("Trajectory dt=%.3f, n_steps=%d", args.dt, args.n_steps)
     logger.info("Thermalization=%d, measurements=%d, skip=%d",
@@ -159,10 +159,10 @@ def main():
 
     # Also save raw plaquette histories for plotting.
     jnp.savez(
-        "phase7_histories.npz",
+        "benchmark_histories.npz",
         **{k: v["plaquette"] for k, v in histories.items()}
     )
-    logger.info("Plaquette histories written to phase7_histories.npz")
+    logger.info("Plaquette histories written to benchmark_histories.npz")
 
 
 if __name__ == "__main__":

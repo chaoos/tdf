@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify Phase 0 (environment) and Phase 1 (lattice + Dirac operator)."""
+"""Verify the environment, lattice utilities, and Wilson-Dirac operator."""
 
 import logging
 import os
@@ -20,7 +20,7 @@ def main():
     configure_logging(level=logging.INFO)
 
     logger.info("=" * 60)
-    logger.info("Phase 0: environment check")
+    logger.info("Environment check")
     logger.info("=" * 60)
     logger.info("JAX version: %s", jax.__version__)
     logger.info("JAX devices: %s", jax.devices())
@@ -29,7 +29,7 @@ def main():
 
     logger.info("")
     logger.info("=" * 60)
-    logger.info("Phase 1: lattice + Wilson-Dirac operator")
+    logger.info("Lattice + Wilson-Dirac operator")
     logger.info("=" * 60)
 
     key = random.PRNGKey(42)
@@ -92,7 +92,7 @@ def main():
 
     logger.info("")
     logger.info("=" * 60)
-    logger.info("All Phase 1 checks passed if the three numbers above are ~0.")
+    logger.info("All checks passed if the three numbers above are ~0.")
     logger.info("=" * 60)
 
 

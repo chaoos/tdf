@@ -1,4 +1,4 @@
-# Phase 7 Results – Standard vs. TDF Canonical HMC
+# Benchmark Results – Standard vs. TDF Canonical HMC
 
 This document summarises the head-to-head comparison between the reference
 standard HMC (full Wilson–Dirac determinant) and the TDF-based canonical HMC
@@ -91,8 +91,8 @@ the distribution being sampled.
 
 The JSON summary and NumPy plaquette histories are saved as:
 
-- `phase7_results.json`
-- `phase7_histories.npz`
+- `benchmark_results.json`
+- `benchmark_histories.npz`
 
 These files can be loaded for plotting or for longer runs with increased
 statistics.

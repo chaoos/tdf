@@ -1,14 +1,19 @@
-# Temporal determinant factorization
+# Temporal determinant factorization for the 2D Schwinger model
 
-Proof-of-concept implementation of the temporal determinant factorization (TDF)
-for the 2-flavour Schwinger model in two dimensions, together with a reference
-standard HMC sampler.  The goal is to compare the TDF approach against a
-conventional HMC that uses the full Wilson–Dirac determinant directly.
+This repository contains a Python/JAX implementation of the temporal determinant
+factorization (TDF) for the two-flavour Schwinger model in two dimensions,
+alongside a reference Hybrid Monte Carlo (HMC) sampler that uses the full
+Wilson–Dirac determinant.
 
-## Environment
+The TDF approach factorises the fermion determinant into time-slice transfer
+matrices and expresses fixed-quark-number (canonical) determinants in terms of
+the transfer-matrix spectrum.  This can be substantially cheaper than the
+conventional full-determinant formulation, especially for lattices with a large
+temporal extent.
 
-The code uses **Python + JAX** with GPU support.  A local virtual environment is
-recommended:
+## Quick start
+
+Create a virtual environment and install the package:
 
 ```bash
 python3 -m venv .venv
@@ -16,133 +21,60 @@ source .venv/bin/activate
 pip install -e .
 ```
 
-This installs JAX with CUDA 12 support.  The RTX 3050 in this environment has
-only 6 GB of VRAM, so GPU memory pre-allocation is disabled via
-`XLA_PYTHON_CLIENT_PREALLOCATE=false` (set in `tests/conftest.py` and in the
-verification scripts).
+The project uses JAX with CUDA 12 support.  GPU memory pre-allocation is
+disabled by default in the scripts and in `tests/conftest.py` because the
+development GPU has only 6 GB of VRAM.
 
-## Implemented so far
-
-### Phase 0 – Setup
-- `pyproject.toml`, `requirements.txt`
-- JAX x64 precision enabled in `tdf/__init__.py`
-
-### Phase 1 – Lattice and Wilson–Dirac operator
-- `tdf/lattice.py`: U(1) gauge fields, plaquette, gauge action, topological charge.
-- `tdf/dirac.py`: Wilson–Dirac operator `K[U, μ]` in site-major ordering and the
-  time-slice blocks `B_t`, `A^+_t`, `A^-_t`.
-- Validation tests:
-  - `γ5 K γ5 = K†` for `μ = 0`
-  - `det K` is real for `μ = 0`
-  - Direct construction matches block reconstruction
-
-### Phase 3 – Reduced determinant (TDF)
-- `tdf/reduced.py`: time-slice transfer matrices `T_i = R_i^{-1} S_i`, the cyclic
-  product `T = T_0 T_1 … T_{L_t-1}`, and the reduced determinant
-
-```
-det K = (∏_t det R_t) * det(I - (-1)^{L_t} T).
-```
-
-- Validation tests confirm the reduced determinant equals the full determinant
-  for periodic and anti-periodic boundary conditions, even and odd `L_t`, and
-  with non-zero mass and chemical potential.
-
-### Phase 4 – Canonical determinants
-- `tdf/canonical.py`: fixed-quark-number determinants `det_k(K[U])` for
-  `k = -L, …, L` from the characteristic polynomial of the transfer matrix.
-
-```
-det_k(K[U]) = (∏_t det R_t) * c_{k+L},
-```
-
-where `c_m` are the coefficients of `det(z I - (-1)^{L_t} T)`.
-
-- Validation tests:
-  - reflection symmetry `det_k^* = det_{-k}`
-  - sum rule `Σ_k det_k = det K[U, μ=0]`
-  - `det_0` is real
-
-### Phase 5 – Reference standard HMC
-- `tdf/hmc.py`: reference Hybrid Monte Carlo sampler for the 2-flavour model
-  using the full Wilson–Dirac determinant.
-
-```
-S[U] = S_g[U] - 2 log |det K[U, μ]|
-```
-
-- Leapfrog integration with automatic differentiation for the fermion force.
-- `scripts/run_hmc_standard.py`: command-line driver.
-- Validation tests:
-  - action is real and finite
-  - standard action matches TDF-based action
-  - force has correct shape
-  - quenched HMC has near-perfect acceptance for tiny steps
-  - full `run_hmc` pipeline executes
-
-### Phase 6 – TDF-based canonical HMC
-- `tdf/hmc_canonical.py`: Hybrid Monte Carlo sampler for a fixed isospin / quark
-  number sector `n` using the TDF canonical determinants.
-
-```
-S_n[U] = S_g[U] - 2 log |det_n(K[U, μ])|
-```
-
-- The weight `exp(-S_n) = exp(-S_g) |det_n|^2` samples the 2-flavour ensemble at
-  fixed sector index `n`.
-- `scripts/run_hmc_canonical.py`: command-line driver with `--n` option.
-- Validation tests:
-  - canonical action is real and its gradient is finite
-  - charge-conjugation symmetry `S_n = S_{-n}` at `μ = 0`
-  - full `run_hmc_canonical` pipeline executes
-
-## Logging
-
-All modules and scripts now use the standard Python `logging` library.  Scripts
-configure logging via `tdf.configure_logging()`; library modules log progress
-and diagnostics at `INFO`/`DEBUG` level.  Set the level when running a script:
+## Running the code
 
 ```bash
-.venv/bin/python scripts/run_hmc_canonical.py --L 4 --Lt 4 --n 2 --beta 3.0 \
-    --n-therm 5 --n-measure 5 --n-skip 2 --n-steps 5
-```
-
-## Running tests and verification
-
-```bash
-# all tests
+# Run the test suite
 .venv/bin/pytest tests/ -v
 
-# Phase 1 verification
-.venv/bin/python scripts/verify_phase1.py
+# Verify the environment, lattice utilities, and Dirac operator
+.venv/bin/python scripts/verify_setup.py
 
-# Reference standard HMC (small example)
+# Reference standard Nf=2 HMC
 .venv/bin/python scripts/run_hmc_standard.py --L 4 --Lt 4 --beta 3.0 \
     --n-therm 10 --n-measure 10 --n-skip 2 --n-steps 5
 
-# TDF canonical HMC (small example)
+# TDF canonical HMC in a fixed sector n
 .venv/bin/python scripts/run_hmc_canonical.py --L 4 --Lt 4 --n 2 --beta 3.0 \
     --n-therm 5 --n-measure 5 --n-skip 2 --n-steps 5
 
-# Phase 7 comparison (small example; increase stats for production)
-.venv/bin/python scripts/run_phase7_comparison.py --L 4 --Lt 4 --beta 5.0 \
+# Benchmark comparing standard and canonical HMC
+.venv/bin/python scripts/run_benchmark.py --L 4 --Lt 4 --beta 5.0 \
     --mass 0.0 --dt 0.1 --n-steps 5 --n-therm 20 --n-measure 50 --n-skip 3
 ```
 
-### Phase 7 – Comparison and results
-- `scripts/run_phase7_comparison.py`: benchmark that runs standard and canonical
-  HMC with identical parameters and records acceptance rates, plaquette
-  autocorrelation times, and wall-clock cost per trajectory.
-- `RESULTS.md`: summary of the Phase 7 benchmark on a `4 × 4` lattice.
+## Package overview
+
+| Module | Purpose |
+|--------|---------|
+| `tdf/lattice.py` | U(1) gauge fields, plaquette, gauge action, topological charge |
+| `tdf/dirac.py` | Wilson–Dirac operator `K[U, μ]` and time-slice blocks |
+| `tdf/reduced.py` | Time-slice transfer matrices and reduced determinant |
+| `tdf/canonical.py` | Fixed-quark-number determinants from the transfer-matrix spectrum |
+| `tdf/hmc.py` | Reference standard HMC sampler |
+| `tdf/hmc_canonical.py` | TDF-based canonical HMC sampler |
+
+## Documentation
+
+More detailed documentation lives in the [`docs/`](docs/) directory:
+
+- [`docs/index.md`](docs/index.md) – project overview and directory guide
+- [`docs/algorithm.md`](docs/algorithm.md) – the TDF and canonical-determinant formalism
+- [`docs/hmc.md`](docs/hmc.md) – using the HMC samplers
+- [`docs/benchmark.md`](docs/benchmark.md) – reproducing and interpreting the benchmark
 
 ## Results
 
-See [`RESULTS.md`](RESULTS.md) for the Phase 7 comparison between standard
-Nf=2 HMC and TDF-based canonical HMC.
+See [`RESULTS.md`](RESULTS.md) for a head-to-head comparison of the standard
+and TDF canonical samplers on a `4 × 4` lattice.
 
-## Roadmap
+## Logging
 
-- Phase 4: canonical determinants `det_k(K)` via the characteristic polynomial of `T`
-- Phase 5: reference standard HMC for the 2-flavour model
-- Phase 6: TDF-based canonical HMC for fixed isospin sectors
-- Phase 7: comparison of acceptance rates, autocorrelations, timings, and physics
+All modules and scripts use the standard Python `logging` library.  Scripts
+configure logging via `tdf.configure_logging()`.  Use `logging.DEBUG` for
+verbose trajectory output, or `logging.INFO` (default) for concise progress
+messages.
