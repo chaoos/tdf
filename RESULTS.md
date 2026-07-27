@@ -126,11 +126,80 @@ The JSON summary and NumPy histories are saved as:
 The JSON file contains the acceptance sweeps, the detailed-run summary, and the
 `L = 4` force-scaling data.
 
+## Pseudofermion comparison
+
+A second benchmark compares the standard pseudofermion estimator (full Dirac
+space) with the TDF pseudofermion estimator (transfer-matrix space).  Both
+target the full 2-flavour weight `|det K[U, μ=0]|²`.  The TDF version keeps the
+bulk factor `|∏_t det R_t|²` exact and uses pseudofermions only for the
+transfer-matrix factor `|det(I - (-1)^{L_t} T)|²`.
+
+### Parameters
+
+- `beta = 5.0`, `m0 = 0.0` (`kappa = 0.25`), `mu = 0.0`
+- leapfrog: `dt = 0.05`, `n_steps = 3`
+- CG tolerance: `tol = 1e-6`
+- HMC: 3–5 thermalization trajectories, 3–5 measurements, skip 1
+- Determinant action check: 50 pseudofermion samples per lattice size
+
+### Force-evaluation diagnostics
+
+| Lattice | Algorithm | `|dH|` mean | `|dH|` max | time/traj |
+|---------|-----------|------------:|-----------:|----------:|
+| 4×4 | standard | 7.32 | 25.37 | 7.92 s |
+| 4×4 | TDF | 0.19 | 0.30 | 3.14 s |
+| 6×6 | standard | 3.43 | 14.48 | 16.22 s |
+| 6×6 | TDF | 0.21 | 0.45 | 4.88 s |
+| 8×8 | standard | 7.04 | 29.78 | 27.27 s |
+| 8×8 | TDF | 0.04 | 0.05 | 6.68 s |
+
+The TDF pseudofermion HMC has a dramatically smaller Hamiltonian energy
+violation at the same step size, indicating a much smoother force.  It is also
+faster per trajectory because the CG solve operates in the `2L`-dimensional
+transfer-matrix space rather than the full `2 L L_t`-dimensional Dirac space.
+
+### Stochastic action noise
+
+For a fixed random gauge configuration the pseudofermion action `S_pf` was
+sampled 50 times and compared with the exact log determinant `S_exact = -log|det K|²`.
+
+| Lattice | Algorithm | `S_exact` | `<S_pf>` | `std(S_pf)` | noise |
+|---------|-----------|----------:|---------:|------------:|------:|
+| 4×4 | standard | -1.10 | 65.62 | 18.50 | 16.79 |
+| 4×4 | TDF | -1.10 | 29.33 | 2.80 | 2.55 |
+| 6×6 | standard | -0.60 | 131.65 | 25.88 | 25.88 |
+| 6×6 | TDF | -0.60 | 62.30 | 3.74 | 3.74 |
+| 8×8 | standard | -0.17 | 247.33 | 47.42 | 47.42 |
+| 8×8 | TDF | -0.17 | 106.80 | 3.63 | 3.63 |
+
+The exact log determinant is close to zero on these small lattices, so the
+absolute offset between `<S_pf>` and `S_exact` is large (it is mainly the
+Gaussian normalization of the pseudofermion integral).  The important quantity
+is the width `std(S_pf)`, which measures the stochastic noise of the estimator.
+The TDF estimator has roughly **5–15 times smaller standard deviation** than the
+standard estimator, and its noise grows much more slowly with the lattice size.
+
+### Observations
+
+- Both pseudofermion samplers have acceptance ≈ 1.0 in these short runs because
+  the stochastic Hamiltonian often decreases during the trajectory.  A proper
+  production study would tune `dt` and `n_steps` to obtain an acceptance rate
+  around 0.7 and then compare autocorrelation times.
+- The TDF pseudofermion force is consistently smoother and cheaper.  This is
+  the expected advantage: the pseudofermions live on time slices rather than on
+  the full space-time lattice.
+- The standard pseudofermion force becomes very noisy on `8×8`, with maximum
+  energy violations of order 30.  This suggests that standard pseudofermion HMC
+  would need a much smaller step size at this volume.
+
 ## Conclusion
 
-The two algorithms behave similarly in acceptance and energy violation on small
-lattices.  The TDF canonical sampler becomes advantageous for the force
-evaluation only when the Wilson–Dirac matrix is large enough; on the `4 × 4`
-lattice its eigenvalue-based backward pass is slower than `slogdet`.  The main
-algorithmic value of the canonical formulation lies in enabling direct sampling
-of fixed-charge sectors rather than in a universal speed-up at small volume.
+The exact-determinant algorithms behave similarly in acceptance and energy
+violation on small lattices; the TDF canonical sampler becomes advantageous for
+the force evaluation only when the Wilson–Dirac matrix is large enough.
+
+The pseudofermion comparison shows a clearer and more immediate advantage for
+the TDF formulation: the stochastic action has substantially lower variance and
+the force is much smoother, especially as the lattice volume grows.  This makes
+TDF-based pseudofermion HMC the more promising approach for larger systems.
+

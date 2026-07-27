@@ -45,6 +45,21 @@ development GPU has only 6 GB of VRAM.
 # Benchmark comparing standard and canonical HMC
 .venv/bin/python scripts/run_benchmark.py --L 4 --Lt 4 --beta 5.0 \
     --mass 0.0 --dt 0.1 --n-steps 5 --n-therm 20 --n-measure 50 --n-skip 3
+
+# Standard pseudofermion HMC
+.venv/bin/python scripts/run_hmc_pseudofermion_standard.py --L 4 --Lt 4 \
+    --beta 5.0 --mass 0.0 --dt 0.05 --n-steps 5 --n-therm 10 \
+    --n-measure 20 --n-skip 2 --tol 1e-6
+
+# TDF pseudofermion HMC
+.venv/bin/python scripts/run_hmc_pseudofermion_tdf.py --L 4 --Lt 4 \
+    --beta 5.0 --mass 0.0 --dt 0.1 --n-steps 5 --n-therm 10 \
+    --n-measure 20 --n-skip 2 --tol 1e-6
+
+# Pseudofermion benchmark (algorithmic comparison)
+.venv/bin/python scripts/run_pseudofermion_benchmark.py --L 4 --Lt 4 \
+    --beta 5.0 --mass 0.0 --dt 0.05 --n-steps 3 --n-therm 5 \
+    --n-measure 5 --n-skip 1 --tol 1e-6
 ```
 
 ## Package overview
@@ -57,6 +72,8 @@ development GPU has only 6 GB of VRAM.
 | `tdf/canonical.py` | Fixed-quark-number determinants from the transfer-matrix spectrum |
 | `tdf/hmc.py` | Reference standard HMC sampler |
 | `tdf/hmc_canonical.py` | TDF-based canonical HMC sampler |
+| `tdf/pseudofermion.py` | Pseudofermion action/force and CG solver |
+| `tdf/hmc_pseudofermion.py` | Pseudofermion HMC drivers |
 
 ## Documentation
 
@@ -65,7 +82,8 @@ More detailed documentation lives in the [`docs/`](docs/) directory:
 - [`docs/index.md`](docs/index.md) – project overview and directory guide
 - [`docs/algorithm.md`](docs/algorithm.md) – the TDF and canonical-determinant formalism
 - [`docs/hmc.md`](docs/hmc.md) – using the HMC samplers
-- [`docs/benchmark.md`](docs/benchmark.md) – reproducing and interpreting the benchmark
+- [`docs/pseudofermion.md`](docs/pseudofermion.md) – stochastic HMC with pseudofermions
+- [`docs/benchmark.md`](docs/benchmark.md) – reproducing and interpreting the benchmarks
 
 ## Results
 

@@ -1,8 +1,12 @@
 # Benchmark
 
-The benchmark compares the *algorithms*, not just the current implementation or
-hardware.  It therefore reports acceptance rates, Hamiltonian energy violation,
-autocorrelation times, and the asymptotic scaling of a single force evaluation.
+The repository contains two benchmarks.  The first (`scripts/run_benchmark.py`)
+compares the exact-determinant standard and TDF canonical HMC samplers.  The
+second (`scripts/run_pseudofermion_benchmark.py`) compares the stochastic
+pseudofermion estimators described in [`pseudofermion.md`](pseudofermion.md).
+
+This page documents the exact-determinant benchmark.  For the pseudofermion
+benchmark see [`pseudofermion.md`](pseudofermion.md) and [`RESULTS.md`](../RESULTS.md).
 
 ## Running the benchmark
 

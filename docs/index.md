@@ -11,6 +11,8 @@ see the top-level [`README.md`](../README.md).
   canonical determinants.
 - [`hmc.md`](hmc.md) – how to run and tune the standard and canonical HMC
   samplers.
+- [`pseudofermion.md`](pseudofermion.md) – stochastic HMC with pseudofermions,
+  both in the full Dirac space and in the TDF transfer-matrix space.
 - [`benchmark.md`](benchmark.md) – how to reproduce the benchmark reported in
   [`RESULTS.md`](../RESULTS.md) and how to interpret the output.
 
