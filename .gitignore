@@ -220,3 +220,11 @@ __marimo__/
 # Sublime
 *.sublime-project
 *.sublime-workspace
+
+# Benchmark outputs
+benchmark_results.json
+benchmark_histories.npz
+pseudofermion_benchmark_*_results.json
+pseudofermion_benchmark_*_histories.npz
+hmc_pseudofermion_standard_summary.npz
+hmc_pseudofermion_tdf_summary.npz
