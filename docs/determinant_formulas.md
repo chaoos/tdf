@@ -147,18 +147,54 @@ product of `L_t` small `2L × 2L` determinants and is evaluated exactly.
 
 ## 4. What the comparison reports
 
-For each lattice size the comparison script prints:
+For each lattice size the comparison script prints three determinant values:
 
-- `S_exact = log |det K|^2` from the full matrix,
-- `S_TDF = log |bulk|^2 + 2 log |det M|` from the reduced determinant,
-- statistics of `S_pf^std[U, φ]` over many Gaussian samples `φ`,
-- statistics of `S_pf^TDF[U, ψ]` over many Gaussian samples `ψ`.
+1. **Exact determinant**
+   ```
+   |det K|² = exp(2 log |det K|)
+   ```
+   computed from the full Wilson–Dirac matrix.
 
-The TDF determinant should agree with the exact determinant to machine
-precision.  The pseudofermion actions have large mean values (dominated by the
-Gaussian normalisation), so the means are not directly compared to
-`S_exact`.  Instead, the standard deviations `σ(S_pf)` are reported as a
-measure of stochastic noise.
+2. **Standard pseudofermion estimate**
+   The pseudofermion field `η` is drawn from the standard complex Gaussian
+   `N(0, I)`.  For a positive-definite matrix `M` the identity (Gattringer &
+   Lang, *Quantum Chromodynamics on the Lattice*, eq. (8.63))
+   ```
+   det M = < exp( -η† (M^{-1} - I) η ) >
+   ```
+   holds.  Writing the pseudofermion action as `S_pf = η† M^{-1} η`, the
+   per-sample weight is therefore
+   ```
+   w = exp(-S_pf + |η|²) .
+   ```
+   The reported value is the sample mean `(1/N) Σ_i w_i`, and the error bar is
+   the standard error of the mean, `σ_mean = std(w) / sqrt(N)`.
+
+3. **TDF pseudofermion estimate**
+   The same weight is used with `M = M_TDF M_TDF†`, multiplied by the exact
+   bulk factor `|bulk|²`:
+   ```
+   w_TDF = |bulk|² exp(-S_pf^TDF + |η|²) .
+   ```
+
+The naive weight `exp(-S_pf)` is **biased**: it corresponds to the flat-measure
+identity used in HMC, not to the normalized Gaussian refresh used here.  The
+corrected weight `exp(-S_pf + |η|²)` removes that bias and is unbiased in
+expectation.
+
+Because the matrices involved have eigenvalues larger than 2, the variance of
+the corrected estimator is formally infinite and, in practice, enormous.  A
+modest sample count therefore gives honest but wide error bars, and the sample
+mean often does not yet bracket the exact determinant.  The comparison reports,
+for each estimator, whether `|mean − exact| ≤ σ_mean`; with modest `N` this
+1-sigma check usually fails.
+
+The script also reports the raw pseudofermion action statistics (`<S_pf>` and
+`σ(S_pf)`).  Those means are dominated by the Gaussian normalisation and by the
+bulk factor, so they are not compared directly.  Their widths measure the
+stochastic noise of the respective estimators and show the real advantage of
+the TDF formulation: the TDF action distribution is much narrower and grows
+more slowly with the lattice size.
 
 ## See also
 

@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
 """Unified comparison of exact, TDF, and pseudofermion determinants.
 
-For each lattice size this script computes:
+For each lattice size this script computes three estimates of the 2-flavour
+weight |det K|^2:
 
-1. the exact 2-flavour log determinant log |det K|^2 using jnp.linalg.slogdet,
-2. the TDF log determinant using the reduced determinant,
-3. the standard pseudofermion action distribution,
-4. the TDF pseudofermion action distribution.
+1. the exact determinant from the full Wilson-Dirac matrix,
+2. the standard pseudofermion estimate <|det K|^2> = <exp(-S_pf)> with its
+   standard error of the mean,
+3. the TDF pseudofermion estimate <|det K|^2> = <exp(-S_pf)> with its standard
+   error of the mean.
 
-The pseudofermion actions are stochastic estimators of the fermion weight.
-Their width relative to the exact log determinant measures the estimator noise.
+The TDF reduced determinant is also reported as a consistency check.
+
+A modest number of pseudofermion samples is used so that the error bars are
+honest: if the estimate is unbiased, the discrepancy between the pseudofermion
+mean and the exact value should be no larger than one standard error of the
+mean about 68% of the time.  The script flags each estimate accordingly.
 """
 
 import argparse
@@ -69,20 +75,44 @@ def main():
         json.dump(summary, f, indent=2)
     logger.info("Summary written to %s", args.output)
 
-    # Print a concise markdown table.
-    print("\n| Lattice | Exact log|det K|² | TDF log|det K|² | TDF rel. diff. | "
-          "Std. pf. <S> | Std. pf. σ | TDF pf. <S> | TDF pf. σ |")
-    print("|---:|---:|---:|---:|---:|---:|---:|---:|")
+    # Print concise markdown tables.
+    print("\n| Lattice | Exact |det K|² | TDF |det K|² | TDF rel. diff. |")
+    print("|---:|---:|---:|---:|")
     for r in results:
         print(
             f"{r['L']}×{r['Lt']} | "
-            f"{r['exact_logdet']:.4f} | "
-            f"{r['tdf_logdet']:.4f} | "
-            f"{r['tdf_rel_diff']:.3e} | "
-            f"{r['standard_pseudofermion']['mean_Spf']:.2f} | "
-            f"{r['standard_pseudofermion']['std_Spf']:.2f} | "
-            f"{r['tdf_pseudofermion']['mean_Spf']:.2f} | "
-            f"{r['tdf_pseudofermion']['std_Spf']:.2f} |"
+            f"{r['exact_det']:.4e} | "
+            f"{jnp.exp(r['tdf_logdet']):.4e} | "
+            f"{r['tdf_rel_diff']:.3e} |"
+        )
+
+    print("\n| Lattice | Exact |det K|² | Std. pf. estimate ± σ_mean | "
+          "TDF pf. estimate ± σ_mean | Std. within 1σ? | TDF within 1σ? |")
+    print("|---:|---:|---:|---:|:--:|:--:|")
+    for r in results:
+        std_mean = r["standard"]["mean_det"]
+        std_sem = r["standard"]["sem_det"]
+        tdf_mean = r["tdf"]["mean_det"]
+        tdf_sem = r["tdf"]["sem_det"]
+        print(
+            f"{r['L']}×{r['Lt']} | "
+            f"{r['exact_det']:.4e} | "
+            f"{std_mean:.4e} ± {std_sem:.4e} | "
+            f"{tdf_mean:.4e} ± {tdf_sem:.4e} | "
+            f"{'yes' if r['standard_agrees_1sigma'] else 'no'} | "
+            f"{'yes' if r['tdf_agrees_1sigma'] else 'no'} |"
+        )
+
+    print("\n| Lattice | Std. pf. <S> | Std. pf. σ(S) | "
+          "TDF pf. <S> | TDF pf. σ(S) |")
+    print("|---:|---:|---:|---:|---:|")
+    for r in results:
+        print(
+            f"{r['L']}×{r['Lt']} | "
+            f"{r['standard_action']['mean_Spf']:.2f} | "
+            f"{r['standard_action']['std_Spf']:.2f} | "
+            f"{r['tdf_action']['mean_Spf']:.2f} | "
+            f"{r['tdf_action']['std_Spf']:.2f} |"
         )
 
 

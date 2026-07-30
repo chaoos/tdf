@@ -6,7 +6,10 @@ import jax.numpy as jnp
 from jax import random
 
 from tdf import dirac, lattice
-from tdf.pseudofermion import estimate_pseudofermion_action_distribution
+from tdf.pseudofermion import (
+    estimate_det_pseudofermion,
+    estimate_pseudofermion_action_distribution,
+)
 from tdf.reduced import reduced_determinant
 
 logger = logging.getLogger(__name__)
@@ -35,8 +38,10 @@ def compare_for_size(L, Lt, beta, mass, n_samples=200, tol=1e-9,
     Returns
     -------
     dict
-        Dictionary with exact log determinant, TDF log determinant, and
-        pseudofermion action distributions for both standard and TDF estimators.
+        Dictionary with exact log determinant, TDF log determinant,
+        pseudofermion determinant estimates (mean and standard error of the
+        mean), 1-sigma agreement flags, and pseudofermion action distributions
+        for both standard and TDF estimators.
     """
     if key is None:
         key = random.PRNGKey(42)
@@ -44,6 +49,7 @@ def compare_for_size(L, Lt, beta, mass, n_samples=200, tol=1e-9,
     kappa = dirac.kappa_from_mass(mass)
 
     key_field, key_pf = random.split(key)
+    key_std, key_tdf = random.split(key_pf)
     theta = lattice.make_gauge_field(L, Lt, key_field)
 
     # Exact determinant.
@@ -63,24 +69,45 @@ def compare_for_size(L, Lt, beta, mass, n_samples=200, tol=1e-9,
         L, Lt, float(log_det_exact), float(log_det_tdf), rel_diff_tdf
     )
 
-    # Standard pseudofermion action distribution.
-    std_pf = estimate_pseudofermion_action_distribution(
+    exact_det = jnp.exp(log_det_exact)
+
+    # Standard pseudofermion determinant estimate.
+    std_det = estimate_det_pseudofermion(
         theta, kappa, n_samples=n_samples, tol=tol, maxiter=maxiter,
-        algorithm="standard", key=key_pf
+        algorithm="standard", key=key_std
     )
 
-    # TDF pseudofermion action distribution.
-    tdf_pf = estimate_pseudofermion_action_distribution(
+    # TDF pseudofermion determinant estimate.
+    tdf_det = estimate_det_pseudofermion(
         theta, kappa, n_samples=n_samples, tol=tol, maxiter=maxiter,
-        algorithm="tdf", key=key_pf
+        algorithm="tdf", key=key_tdf
+    )
+
+    # 1-sigma agreement checks: |estimate - exact| <= standard error of mean.
+    std_agrees = bool(abs(std_det["mean_det"] - float(exact_det)) <= std_det["sem_det"])
+    tdf_agrees = bool(abs(tdf_det["mean_det"] - float(exact_det)) <= tdf_det["sem_det"])
+
+    # Action distributions for noise comparison.
+    std_action = estimate_pseudofermion_action_distribution(
+        theta, kappa, n_samples=n_samples, tol=tol, maxiter=maxiter,
+        algorithm="standard", key=key_std
+    )
+    tdf_action = estimate_pseudofermion_action_distribution(
+        theta, kappa, n_samples=n_samples, tol=tol, maxiter=maxiter,
+        algorithm="tdf", key=key_tdf
     )
 
     return {
         "L": L,
         "Lt": Lt,
+        "exact_det": float(exact_det),
         "exact_logdet": float(log_det_exact),
         "tdf_logdet": float(log_det_tdf),
         "tdf_rel_diff": rel_diff_tdf,
-        "standard_pseudofermion": std_pf,
-        "tdf_pseudofermion": tdf_pf,
+        "standard": std_det,
+        "tdf": tdf_det,
+        "standard_agrees_1sigma": std_agrees,
+        "tdf_agrees_1sigma": tdf_agrees,
+        "standard_action": std_action,
+        "tdf_action": tdf_action,
     }
