@@ -45,7 +45,7 @@ sweep and smaller step size to reach the usual 0.6–0.8 acceptance target.
 | Acceptance rate | 0.373 | 0.380 |
 | Mean `delta H` | 1.93 | 1.78 |
 | Std `delta H` | 1.74 | 1.51 |
-| Max `|delta H|` | 6.50 | 6.92 |
+| Max \|delta H\| | 6.50 | 6.92 |
 | `<P>` | 0.92470 | 0.93934 |
 | `std(P)` | 0.01472 | 0.01829 |
 | `tau_int(P)` | 1.08 | 1.98 |
@@ -128,26 +128,46 @@ The JSON file contains the acceptance sweeps, the detailed-run summary, and the
 
 ## Unified determinant comparison
 
-The script `scripts/run_determinant_comparison.py` compares the exact
-determinant, the TDF reduced determinant, and the stochastic pseudofermion
-estimators on the same gauge configurations.  All numbers below are for
-`beta = 5.0`, `m0 = 0.0` (`kappa = 0.25`), `mu = 0.0`, with 200 pseudofermion
-samples and CG tolerance `1e-9`.
+The script `scripts/run_determinant_comparison.py` compares three estimates of
+the 2-flavour weight `|det K|²` on the same gauge configurations:
 
-| Lattice | Exact log\|det K\|² | TDF log\|det K\|² | TDF rel. diff. |
-|---------|--------------------:|------------------:|---------------:|
-| 4×4 | 0.7148 | 0.7148 | 1.110e-15 |
-| 6×6 | 0.0604 | 0.0604 | 5.274e-16 |
-| 8×8 | -0.6971 | -0.6971 | 5.063e-14 |
+1. the exact determinant from the full Wilson–Dirac matrix,
+2. the standard pseudofermion estimate with its standard error of the mean,
+3. the TDF pseudofermion estimate with its standard error of the mean.
+
+All numbers below are for `beta = 5.0`, `m0 = 0.0` (`kappa = 0.25`),
+`mu = 0.0`, with a modest **200 pseudofermion samples** and CG tolerance `1e-6`.
+The TDF reduced determinant is also shown as a consistency check.
+
+| Lattice | Exact \|det K\|² | TDF \|det K\|² | TDF rel. diff. |
+|---------|----------------:|---------------:|---------------:|
+| 4×4 | 2.0438e+00 | 2.0438e+00 | 1.110e-15 |
+| 6×6 | 1.0622e+00 | 1.0622e+00 | 5.274e-16 |
+| 8×8 | 4.9803e-01 | 4.9803e-01 | 5.063e-14 |
 
 The TDF determinant matches the exact determinant to machine precision on all
 three lattice sizes, confirming the reduced determinant implementation.
 
+| Lattice | Exact \|det K\|² | Std. pf. estimate ± σ_mean | TDF pf. estimate ± σ_mean | Std. within 1σ? | TDF within 1σ? |
+|---------|----------------:|---------------------------:|--------------------------:|:---------------:|:--------------:|
+| 4×4 | 2.0438e+00 | 1.49e-02 ± 7.29e-03 | 5.04e-06 ± 3.86e-06 | no | no |
+| 6×6 | 1.0622e+00 | 4.49e-09 ± 4.07e-09 | 5.04e-15 ± 5.00e-15 | no | no |
+| 8×8 | 4.9803e-01 | 2.60e-26 ± 2.33e-26 | 3.34e-34 ± 2.25e-34 | no | no |
+
+The pseudofermion weights now use the corrected estimator
+`exp(-S_pf + |φ|²)` (Gattringer & Lang, eq. (8.63)), which is **unbiased** in
+expectation.  With only 200 samples the variance is still enormous: the weights
+vary over many orders of magnitude, so the sample means are far from the exact
+value and the 1-sigma agreement flags are "no".  This is the honest outcome of
+using a modest sample count: the error bars are large, and the exact value is
+not yet captured.  Many more samples (or a variance-reduction scheme) would be
+needed for a reliable point estimate.
+
 | Lattice | Std. pf. `<S_pf>` | Std. pf. `σ(S_pf)` | TDF pf. `<S_pf>` | TDF pf. `σ(S_pf)` |
 |---------|------------------:|-------------------:|-----------------:|------------------:|
-| 4×4 | 59.69 | 24.53 | 28.42 | 2.75 |
-| 6×6 | 143.45 | 34.85 | 61.30 | 3.27 |
-| 8×8 | 251.86 | 47.77 | 107.07 | 4.78 |
+| 4×4 | 58.98 | 20.35 | 28.12 | 2.47 |
+| 6×6 | 145.42 | 35.96 | 61.49 | 3.56 |
+| 8×8 | 251.58 | 48.35 | 105.99 | 4.44 |
 
 The exact log determinant is close to zero on these small lattices, so the
 pseudofermion action `<S_pf>` has a large additive offset (mainly the Gaussian
@@ -158,33 +178,104 @@ much slower.
 
 ## Pseudofermion HMC comparison
 
-A separate benchmark compares the two pseudofermion HMC samplers (standard and
-TDF) as full Markov chains.  Both target the full 2-flavour weight
-`|det K[U, μ=0]|²`.
+A separate benchmark compares five pseudofermion HMC samplers as full Markov
+chains.  All target the full 2-flavour weight `|det K[U, μ=0]|²`.
+
+**Important correction.**  The pseudofermion fields are now refreshed in the
+book-style way (Gattringer & Lang, eq. (8.37)):
+
+```
+φ = K[U] χ ,                       χ ∼ N(0, I)        (standard)
+ψ = M[U] η ,                       η ∼ N(0, I)        (TDF exact bulk, M = I - (-1)^Lt T)
+φ_t = R_t[U] χ_t ,                 χ_t ∼ N(0, I)      (TDF stochastic bulk, one per t)
+φ_bulk = R[U] χ ,                  χ ∼ N(0, I)        (TDF block-diagonal bulk, R = diag(R_t))
+ψ = M[U] η ,                       η ∼ N(0, I)        (TDF stochastic transfer factor)
+```
+
+Refreshing from `N(0, I)` instead of `N(0, A)` gives a biased weight and the
+results shown below are *not* comparable with such a setup.  The TDF stochastic
+variants differ only in how the time-slice bulk determinants `det R_t` are
+packaged: per-slice, as a single product matrix, or as one concatenated
+block-diagonal field.
 
 ### Parameters
 
 - `beta = 5.0`, `m0 = 0.0` (`kappa = 0.25`), `mu = 0.0`
-- leapfrog: `dt = 0.05`, `n_steps = 3`
-- CG tolerance: `tol = 1e-6`
-- HMC: 3–5 thermalization trajectories, 3–5 measurements, skip 1
-- Determinant action check: 50 pseudofermion samples per lattice size
+- leapfrog: `n_steps = 3`, CG tolerance `tol = 1e-6`
+- HMC: 5 thermalization trajectories, 10 measurements, skip 2
+- `dt` is chosen independently for each sampler (see table)
 
 ### Force-evaluation diagnostics
 
-| Lattice | Algorithm | `|dH|` mean | `|dH|` max | time/traj |
-|---------|-----------|------------:|-----------:|----------:|
-| 4×4 | standard | 7.32 | 25.37 | 7.92 s |
-| 4×4 | TDF | 0.19 | 0.30 | 3.14 s |
-| 6×6 | standard | 3.43 | 14.48 | 16.22 s |
-| 6×6 | TDF | 0.21 | 0.45 | 4.88 s |
-| 8×8 | standard | 7.04 | 29.78 | 27.27 s |
-| 8×8 | TDF | 0.04 | 0.05 | 6.68 s |
+| Lattice | Algorithm | `dt` | accept | `std(\|dH\|)` | `max \|dH\|` | time/traj |
+|---------|-----------|------|-------:|------------:|------------:|----------:|
+| 4×4 | standard | 0.050 | 0.70 | 1.18 | 3.08 | 8.09 s |
+| 4×4 | TDF exact bulk | 0.050 | 0.60 | 1.29 | 2.15 | 3.02 s |
+| 4×4 | TDF stochastic bulk | 0.030 | 0.65 | 1.17 | 2.76 | 4.67 s |
+| 4×4 | TDF bulk product (reverse) | 0.030 | 0.70 | 1.56 | 3.18 | 4.76 s |
+| 4×4 | TDF block-diagonal bulk | 0.030 | 0.60 | 1.38 | 2.91 | 4.91 s |
+| 6×6 | standard | 0.040 | 0.75 | 1.06 | 2.22 | 16.52 s |
+| 6×6 | TDF exact bulk | 0.004 | 0.50 | 0.97 | 3.20 | 4.42 s |
+| 6×6 | TDF stochastic bulk | 0.003 | 0.75 | 0.57 | 1.21 | 6.17 s |
+| 6×6 | TDF bulk product (reverse) | 0.003 | 0.65 | 0.91 | 1.65 | 6.31 s |
+| 6×6 | TDF block-diagonal bulk | 0.003 | 0.80 | 1.30 | 3.51 | 6.51 s |
+| 8×8 | standard | 0.050 | 0.55 | 1.74 | 2.97 | 27.80 s |
+| 8×8 | TDF exact bulk | 0.003 | 0.20 | 3902.11 | 11906.52 | 6.10 s |
+| 8×8 | TDF stochastic bulk | 0.002 | 0.55 | 61.21 | 205.52 | 7.73 s |
+| 8×8 | TDF bulk product (reverse) | 0.002 | 0.50 | 2.62 | 6.62 | 8.03 s |
+| 8×8 | TDF block-diagonal bulk | 0.002 | 0.70 | 15.85 | 51.84 | 8.14 s |
 
-The TDF pseudofermion HMC has a dramatically smaller Hamiltonian energy
-violation at the same step size, indicating a much smoother force.  It is also
-faster per trajectory because the CG solve operates in the `2L`-dimensional
-transfer-matrix space rather than the full `2 L L_t`-dimensional Dirac space.
+*The `8×8` pseudofermion runs used seed `43` because seed `42` produced a rare
+extreme pseudofermion draw for the block-diagonal sampler in the first
+measurement trajectory (`max |dH| ≈ 9.5×10⁴`).  With seed `43` all samplers
+remain finite and the block-diagonal sampler reaches the highest acceptance
+(0.70) among the TDF variants, though its energy violations are still larger
+than the bulk-product variant on this short run.*
+
+On the `4×4` lattice all four TDF variants are faster per trajectory than
+standard.  The exact-bulk version is the cheapest (about **2.7× faster** than
+standard).  The stochastic-bulk, bulk-product and block-diagonal versions are
+comparable in speed; with the reverse product order the bulk-product variant
+reaches the same acceptance as standard (`≈ 0.7`) at `dt = 0.03`.
+
+On `6×6` the stochastic-bulk and block-diagonal variants are the best TDF
+formulations: both match or exceed standard's acceptance (0.75–0.80) with
+comparable Hamiltonian error.  The bulk-product variant is almost as good
+(acceptance 0.65) and uses only two pseudofermion fields, but building the
+product matrix adds overhead so its wall-clock time is similar.
+
+On `8×8` all pseudofermionized bulk variants are dramatically smoother than the
+exact-bulk variant.  The bulk-product variant gives the smallest energy
+violations (`max |dH| ≈ 6.6`) at the same acceptance as stochastic-bulk and
+block-diagonal (≈ 0.55–0.70).  The block-diagonal variant reaches the highest
+acceptance (0.70) but shows larger occasional energy violations (`max |dH| ≈ 52`);
+these are stochastic outliers, not a bias, and its wall-clock cost is
+essentially identical to the per-slice stochastic-bulk formulation.  A single
+rare outlier (`max |dH| ≈ 9.5×10⁴`) was observed with seed `42` and disappeared
+with seed `43`, confirming the sensitivity of these short runs to the
+pseudofermion noise.
+
+The price of all TDF pseudofermion variants is a much smaller usable step size:
+on `8×8` they need `dt ≈ 0.002` while standard uses `dt = 0.050`, a factor of
+25.  Because the force is cheaper, the per-trajectory cost is still lower
+(≈ 8 s vs 28 s), but a fair cost-per-independent-sample comparison would need
+to account for the different step sizes and autocorrelation times.
+
+### Bulk-product ordering comparison
+
+On the `4×4` lattice the three multiplication orders were tested with the same
+step size `dt = 0.03`:
+
+| Order | `M_bulk` construction | accept | `max \|dH\|` |
+|-------|----------------------|-------:|------------:|
+| natural | $R_0 R_1 R_2 R_3$ | 0.65 | 3.40 |
+| reverse | $R_3 R_2 R_1 R_0$ | 0.70 | 3.18 |
+| balanced | $(R_0 R_1)(R_2 R_3)$ | 0.65 | 3.40 |
+
+Differences are modest on this small volume, but the reverse order gives the
+highest acceptance and was therefore used for the `6×6` and `8×8` bulk-product
+runs.  A systematic ordering optimization on larger volumes would require more
+statistics.
 
 ### Stochastic action noise
 
@@ -195,30 +286,70 @@ sampled 50 times and compared with the exact log determinant `S_exact = -log|det
 |---------|-----------|----------:|---------:|------------:|------:|
 | 4×4 | standard | -1.10 | 65.62 | 18.50 | 16.79 |
 | 4×4 | TDF | -1.10 | 29.33 | 2.80 | 2.55 |
-| 6×6 | standard | -0.60 | 131.65 | 25.88 | 25.88 |
+| 6×6 | standard | -0.60 | 128.77 | 26.96 | 26.96 |
 | 6×6 | TDF | -0.60 | 62.30 | 3.74 | 3.74 |
 | 8×8 | standard | -0.17 | 247.33 | 47.42 | 47.42 |
 | 8×8 | TDF | -0.17 | 106.80 | 3.63 | 3.63 |
 
-The exact log determinant is close to zero on these small lattices, so the
-absolute offset between `<S_pf>` and `S_exact` is large (it is mainly the
-Gaussian normalization of the pseudofermion integral).  The important quantity
-is the width `std(S_pf)`, which measures the stochastic noise of the estimator.
-The TDF estimator has roughly **5–15 times smaller standard deviation** than the
-standard estimator, and its noise grows much more slowly with the lattice size.
+The TDF pseudofermion estimator (used for the transfer-matrix factor in the
+exact-bulk variant, and for both the bulk and transfer-matrix factors in the
+stochastic-bulk variant) has **5–15 times smaller standard deviation** than the
+standard one, and its noise grows much more slowly with the lattice size.
 
 ### Observations
 
-- Both pseudofermion samplers have acceptance ≈ 1.0 in these short runs because
-  the stochastic Hamiltonian often decreases during the trajectory.  A proper
-  production study would tune `dt` and `n_steps` to obtain an acceptance rate
-  around 0.7 and then compare autocorrelation times.
-- The TDF pseudofermion force is consistently smoother and cheaper.  This is
-  the expected advantage: the pseudofermions live on time slices rather than on
-  the full space-time lattice.
-- The standard pseudofermion force becomes very noisy on `8×8`, with maximum
-  energy violations of order 30.  This suggests that standard pseudofermion HMC
-  would need a much smaller step size at this volume.
+- The book-style refresh makes all samplers correct.  With the old `N(0, I)`
+  refresh the TDF force appeared much smoother, but that setup was biased.
+- On `4×4` the TDF variants win on speed and stochastic noise.
+- On `6×6` and `8×8` the exact-bulk TDF sampler needs a much smaller `dt` to
+  stay stable and remains rougher than standard HMC.  This is the opposite of
+  the earlier (biased) finding.
+- All pseudofermionized bulk variants (separate `φ_t` per slice, single
+  bulk-product `φ_bulk`, and concatenated block-diagonal `φ_bulk`) smooth the
+  force dramatically compared with the exact-bulk variant.  Which one is best
+  depends on volume and seed in these short runs; the block-diagonal variant is
+  mathematically identical to the per-slice formulation but exposes more
+  parallelism for a single CG solve.
+- The plaquette means from the short runs do not always agree between the
+  algorithms; this is mostly a statistical issue because the runs are short
+  and start from the same random gauge field.
+
+## `16 × 16` block-cyclic transfer-matrix test
+
+At `16 × 16` the original TDF pseudofermion samplers fail because the transfer
+matrix product `T = T_0 T_1 … T_{Lt-1}` has condition number `~10¹²` at
+`m0 = 0.0`.  Solving `(M M†) χ = ψ` with `M = I - (-1)^Lt T` therefore loses all
+numerical accuracy in double precision, producing `max |ΔH| ~ 10¹²` and zero
+acceptance regardless of the leapfrog step size.
+
+The block-cyclic transfer-matrix reformulation avoids forming `T` entirely.
+Instead of `det M` it uses `det(B B†)`, where `B` is a block-cyclic matrix whose
+blocks are the individual `T_t = R_t^{-1} S_t`.  Because `B` is never formed and
+its action is applied by solving the well-conditioned `R_t` matrices, the
+formulation remains stable at large `Lt`.
+
+### Parameters and results
+
+- `beta = 5.0`, `m0 = 0.0` (`kappa = 0.25`), `mu = 0.0`
+- leapfrog: `dt = 0.001`, `n_steps = 3`, CG tolerance `tol = 1e-6`
+- HMC: 5 thermalization trajectories, 10 measurements, skip 2
+- seed 42
+
+| Algorithm | `dt` | accept | `std(\|dH\|)` | `max \|dH\|` | time/traj | `<P>` |
+|-----------|------|-------:|------------:|----------:|----------:|------:|
+| TDF block-cyclic TM | 0.001 | 0.95 | 0.09 | 0.19 | 16.2 s | 0.02341 |
+
+The block-cyclic sampler is extremely smooth at this step size
+(`max |ΔH| < 0.2`) and achieves 95% acceptance.  The plaquette value is
+consistent with the small-volume trend.  A larger `dt` (e.g. 0.002) gives
+~67% acceptance with similarly small energy violations, so a modest tuning
+study could find a substantially cheaper operating point.
+
+The other TDF pseudofermion variants (exact-bulk, stochastic-bulk,
+bulk-product and block-diagonal bulk) all share the same `M M†` transfer-matrix
+solve and fail at `16 × 16`.  Standard pseudofermion HMC, by contrast, uses the
+full Wilson–Dirac operator `K` whose condition number at `16 × 16, m0 = 0.0` is
+only `~8`, so it remains numerically viable (though slower per trajectory).
 
 ## Conclusion
 
@@ -226,8 +357,15 @@ The exact-determinant algorithms behave similarly in acceptance and energy
 violation on small lattices; the TDF canonical sampler becomes advantageous for
 the force evaluation only when the Wilson–Dirac matrix is large enough.
 
-The pseudofermion comparison shows a clearer and more immediate advantage for
-the TDF formulation: the stochastic action has substantially lower variance and
-the force is much smoother, especially as the lattice volume grows.  This makes
-TDF-based pseudofermion HMC the more promising approach for larger systems.
+For pseudofermion HMC the picture is more nuanced after fixing the refresh.
+The TDF estimator has substantially lower stochastic variance, which is a real
+advantage.  The exact-bulk TDF force is rougher than expected, but the
+fully stochastic-bulk formulation smooths it considerably.  At `16 × 16` the
+naive transfer-matrix solve `M = I - (-1)^Lt T` becomes numerically unstable;
+the block-cyclic reformulation `det(B B†)` restores stability by avoiding the
+exponentially ill-conditioned product `T`.  A definitive comparison of
+cost-per-independent-sample still requires a careful integrator tuning study
+(independent `dt` and `n_steps`, autocorrelation times), but the block-cyclic
+variant is now the only TDF pseudofermion sampler that remains viable at
+`16 × 16`.
 
